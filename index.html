@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Color Memory: Ultimate</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+
+        :root {
+            --red: #ff5252;
+            --green: #69f0ae;
+            --blue: #448aff;
+            --yellow: #ffd740;
+            --bg-color: #00bcd4;
+            --text-color: #ffffff;
+            --ui-bg: rgba(255, 255, 255, 0.15);
+            --ui-border: rgba(255, 255, 255, 0.3);
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #00bcd4, #0097a7);
+            color: var(--text-color);
+            position: relative;
+        }
+
+        /* Анимация фона (Жидкость) */
+        .liquid-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            background: linear-gradient(135deg, #00bcd4, #00838f);
+        }
+        .drop {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
+        }
+        @keyframes float {
+            0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+        }
+
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10; transition: opacity 0.5s;
+        }
+        .hidden { opacity: 0; pointer-events: none; z-index: -1; }
+
+        .card {
+            background: var(--ui-bg);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 30px;
+            border: 1px solid var(--ui-border);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 85%;
+            max-width: 400px;
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        h1 { margin: 0 0 10px 0; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 26px; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        h2 { margin: 0 0 15px 0; font-weight: 800; color: #e0f7fa; font-size: 18px; }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 15px;
+            margin: 15px 0;
+            font-weight: bold;
+            font-size: 1.1em;
+            border: 1px solid var(--ui-border);
+        }
+        .stat-val { color: #fff; font-size: 1.5em; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+        input {
+            width: 100%; padding: 15px; border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 15px; font-size: 18px; margin-bottom: 20px;
+            outline: none; font-family: inherit; text-align: center;
+            background: rgba(255,255,255,0.9); color: #333;
+        }
+        input:focus { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
+
+        button {
+            background: linear-gradient(45deg, #00e5ff, #00b0ff);
+            color: #004d40;
+            border: none; padding: 16px; font-size: 18px; font-weight: 800;
+            border-radius: 50px; cursor: pointer; width: 100%;
+            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        button:active { transform: scale(0.96); }
+        button.secondary { background: rgba(255,255,255,0.2); color: white; box-shadow: none; }
+        button.stop-btn { background: linear-gradient(45deg, #ff9800, #f57c00); color: white; box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4); }
+        button.risk-btn { background: linear-gradient(45deg, #00e676, #00c853); color: white; box-shadow: 0 6px 20px rgba(0, 230, 118, 0.4); display: none; }
+
+        .owner-text {
+            position: absolute; bottom: 10px; width: 100%; text-align: center;
+            font-size: 12px; color: rgba(255,255,255,0.7); font-weight: bold;
+            pointer-events: none; z-index: 20;
+        }
+
+        /* ИГРОВОЕ ПОЛЕ */
+        #game-screen { justify-content: flex-start; padding-top: 20px; }
+        
+        #hud {
+            width: 100%; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+        }
+        .hud-item { text-align: center; }
+        .hud-label { font-size: 10px; text-transform: uppercase; opacity: 0.8; }
+        .hud-value { font-size: 20px; font-weight: 900; }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            width: 90%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            margin: auto;
+        }
+
+        .tile {
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            border: 4px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Цвета плиток */
+        .tile.red { background: rgba(255, 82, 82, 0.3); border-color: var(--red); }
+        .tile.green { background: rgba(105, 240, 174, 0.3); border-color: var(--green); }
+        .tile.blue { background: rgba(68, 138, 255, 0.3); border-color: var(--blue); }
+        .tile.yellow { background: rgba(255, 215, 64, 0.3); border-color: var(--yellow); }
+
+        /* Активация */
+        .tile.active {
+            transform: scale(0.95);
+            box-shadow: 0 0 30px currentColor;
+            filter: brightness(1.5);
+        }
+        .tile.red.active { background: var(--red); color: var(--red); }
+        .tile.green.active { background: var(--green); color: var(--green); }
+        .tile.blue.active { background: var(--blue); color: var(--blue); }
+        .tile.yellow.active { background: var(--yellow); color: var(--yellow); }
+
+        .tile:active { transform: scale(0.95); }
+        .tile.disabled { pointer-events: none; opacity: 0.7; }
+
+        #message-area {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            min-height: 24px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #controls {
+            width: 90%; max-width: 500px;
+            margin-top: 20px;
+            display: flex; gap: 10px;
+        }
+
+        /* Модалка результата */
+        #result-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #result-modal.active { opacity: 1; pointer-events: auto; }
+        .result-card {
+            background: white; color: #333;
+            padding: 30px; border-radius: 25px;
+            text-align: center; width: 80%; max-width: 350px;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .res-title { font-size: 26px; font-weight: 900; margin-bottom: 10px; }
+        .res-score { font-size: 36px; font-weight: 900; margin: 15px 0; }
+        .win { color: #00c853; } .lose { color: #ff5252; }
+
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <!-- Фон -->
+    <div class="liquid-bg" id="liquid-bg"></div>
+
+    <!-- Экран 1: Вход (Только один раз) -->
+    <div id="screen-login" class="screen">
+        <div class="card">
+            <h1>Color Memory</h1>
+            <p style="margin-bottom: 20px; opacity: 0.9;">Введи никнейм. Изменить будет нельзя!</p>
+            <input type="text" id="nickname-input" placeholder="Твой ник..." maxlength="10">
+            <button onclick="login()">НАЧАТЬ</button>
+        </div>
+        <div class="owner-text">owner - t.me @leymik</div>
+    </div>
+
+    <!-- Экран 2: Меню -->
+    <div id="screen-menu" class="screen hidden">
+        <div class="card">
+            <h1 id="menu-greeting">Привет!</h1>
+            <div class="stat-box">
+                <div>Рейтинг ELO</div>
+                <div class="stat-val" id="menu-elo">0</div>
+            </div>
+            <button onclick="startGame()">ИГРАТЬ</button>
+            <button class="secondary" onclick="resetProgress()" style="font-size: 12px; padding: 10px; margin-top: 20px; opacity: 0.5;">Сброс прогресса</button>
+        </div>
+        <div class="owner-text">owner - t.me @leymik</div>
+    </div>
+
+    <!-- Экран 3: Игра -->
+    <div id="game-screen" class="screen hidden">
+        <div id="hud">
+            <div class="hud-item">
+                <div class="hud-label">Волна</div>
+                <div class="hud-value" id="wave-display">1</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Куш</div>
+                <div class="hud-value" id="potential-elo" style="color: #ffd740;">+0</div>
+            </div>
+        </div>
+
+        <div id="grid-container">
+            <div class="tile red" data-color="red" onclick="handleTileClick('red')"></div>
+            <div class="tile green" data-color="green" onclick="handleTileClick('green')"></div>
+            <div class="tile blue" data-color="blue" onclick="handleTileClick('blue')"></div>
+            <div class="tile yellow" data-color="yellow" onclick="handleTileClick('yellow')"></div>
+        </div>
+
+        <div id="message-area">Готовься...</div>
+
+        <div id="controls">
+            <button class="stop-btn" id="btn-stop" onclick="stopRound(true)">ЗАБРАТЬ ELO</button>
+            <button class="risk-btn" id="btn-risk" onclick="nextRound()">ПРОДОЛЖИТЬ</button>
+        </div>
+        
+        <div class="owner-text">owner - t.me @leymik</div>
+    </div>
+
+    <!-- Результат -->
+    <div id="result-modal">
+        <div class="result-card">
+            <div class="res-title" id="res-title">ОШИБКА!</div>
+            <div style="color:#666;" id="res-desc">Ты нажал неверно.</div>
+            <div class="res-score" id="res-score">-50</div>
+            <button onclick="toMenu()">В МЕНЮ</button>
+        </div>
+    </div>
+
+    <script>
+        // --- ГЕНЕРАЦИЯ ФОНА ---
+        function createDrops() {
+            const container = document.getElementById('liquid-bg');
+            for(let i=0; i<15; i++) {
+                const drop = document.createElement('div');
+                drop.className = 'drop';
+                const size = Math.random() * 100 + 50;
+                drop.style.width = `${size}px`;
+                drop.style.height = `${size}px`;
+                drop.style.left = `${Math.random() * 100}%`;
+                drop.style.animationDuration = `${Math.random() * 10 + 10}s`;
+                drop.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(drop);
+            }
+        }
+        createDrops();
+
+        // --- ЗВУКИ (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const frequencies = {
+            'red': 261.63,   // C4
+            'green': 329.63, // E4
+            'blue': 392.00,  // G4
+            'yellow': 523.25,// C5
+            'win': 600,
+            'lose': 150
+        };
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            
+            if (frequencies[type]) {
+                osc.type = type === 'win' || type === 'lose' ? 'triangle' : 'sine';
+                osc.frequency.setValueAtTime(frequencies[type], now);
+                
+                if (type === 'win') {
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+                    gainNode.gain.setValueAtTime(0.1, now);
+                    gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                } else if (type === 'lose') {
+                    osc.frequency.linearRampToValueAtTime(50, now + 0.5);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.linearRampToValueAtTime(0, now + 0.5);
+                    osc.start(now); osc.stop(now + 0.5);
+                } else {
+                    gainNode.gain.setValueAtTime(0.1, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now); osc.stop(now + 0.4);
+                }
+            }
+        }
+
+        // --- БАЗА ДАННЫХ ---
+        let DB = { nick: null, elo: 0 };
+        
+        function loadDB() {
+            const savedNick = localStorage.getItem('cm_nick');
+            const savedElo = localStorage.getItem('cm_elo');
+            
+            if (savedNick) {
+                DB.nick = savedNick;
+                DB.elo = parseInt(savedElo || '0');
+                showScreen('screen-menu');
+                updateMenu();
+            } else {
+                showScreen('screen-login');
+            }
+        }
+
+        function saveDB() {
+            if(DB.nick) {
+                localStorage.setItem('cm_nick', DB.nick);
+                localStorage.setItem('cm_elo', DB.elo);
+            }
+        }
+
+        function resetProgress() {
+            if(confirm("Ты уверен? Весь прогресс и ник будут удалены!")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // --- UI ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function login() {
+            const input = document.getElementById('nickname-input');
+            const nick = input.value.trim();
+            if (!nick) {
+                input.style.borderColor = '#ff5252';
+                return;
+            }
+            DB.nick = nick;
+            saveDB();
+            showScreen('screen-menu');
+            updateMenu();
+        }
+
+        function updateMenu() {
+            document.getElementById('menu-greeting').innerText = `Привет, ${DB.nick}!`;
+            document.getElementById('menu-elo').innerText = DB.elo;
+        }
+
+        function toMenu() {
+            document.getElementById('result-modal').classList.remove('active');
+            showScreen('screen-menu');
+            updateMenu();
+        }
+
+        // --- ИГРОВАЯ ЛОГИКА ---
+        const colors = ['red', 'green', 'blue', 'yellow'];
+        let Game = {
+            sequence: [],
+            playerStep: 0,
+            wave: 1,
+            isInputLocked: true,
+            potentialReward: 0,
+            roundActive: false
+        };
+
+        function startGame() {
+            Game.wave = 1;
+            Game.sequence = [];
+            Game.potentialReward = 0;
+            showScreen('game-screen');
+            setTimeout(prepareRound, 500);
+        }
+
+        function prepareRound() {
+            Game.roundActive = true;
+            Game.isInputLocked = true;
+            Game.playerStep = 0;
+            
+            // Сброс UI
+            document.querySelectorAll('.tile').forEach(t => {
+                t.classList.remove('active', 'disabled');
+            });
+            document.getElementById('btn-stop').style.display = 'none';
+            document.getElementById('btn-risk').style.display = 'none';
+            
+            const msg = document.getElementById('message-area');
+            msg.innerText = "Запоминай...";
+            msg.style.color = "#fff";
+
+            updateHUD();
+
+            // Добавляем новый цвет
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            Game.sequence.push(randomColor);
+
+            // 3 секунды на подготовку перед показом
+            setTimeout(() => {
+                playSequence();
+            }, 3000);
+        }
+
+        function playSequence() {
+            const msg = document.getElementById('message-area');
+            msg.innerText = "Смотри...";
+            
+            let i = 0;
+            // Расчет скорости
+            let speed = 1000; // 1 сек
+            if (Game.wave > 12) speed = 600;
+            if (Game.wave > 30) speed = 400;
+
+            const interval = setInterval(() => {
+                if (i >= Game.sequence.length) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        msg.innerText = "Твой ход!";
+                        msg.style.color = "#69f0ae";
+                        Game.isInputLocked = false;
+                        // Включаем плитки для нажатия
+                        document.querySelectorAll('.tile').forEach(t => t.classList.remove('disabled'));
+                    }, 500);
+                    return;
+                }
+                activateTile(Game.sequence[i]);
+                i++;
+            }, speed);
+        }
+
+        function activateTile(color) {
+            const tile = document.querySelector(`.tile.${color}`);
+            tile.classList.add('active');
+            playSound(color);
+            setTimeout(() => {
+                tile.classList.remove('active');
+            }, 300); // Длительность свечения
+        }
+
+        function handleTileClick(color) {
+            if (Game.isInputLocked || !Game.roundActive) return;
+
+            // Проигрываем звук и анимацию нажатия
+            activateTile(color);
+
+            // Проверка
+            if (color === Game.sequence[Game.playerStep]) {
+                // Правильно
+                Game.playerStep++;
+                
+                // Если вся последовательность введена верно
+                if (Game.playerStep === Game.sequence.length) {
+                    Game.isInputLocked = true;
+                    document.querySelectorAll('.tile').forEach(t => t.classList.add('disabled'));
+                    handleSuccess();
+                }
+            } else {
+                // Ошибка
+                gameOver(false);
+            }
+        }
+
+        function calculateReward(wave) {
+            // Экспоненциальный рост
+            // 1 волна: 8
+            // 2 волны: 18
+            // 5 волн: 60
+            // 10 волн: 200
+            return Math.floor(8 * Math.pow(wave, 1.3));
+        }
+
+        function handleSuccess() {
+            Game.roundActive = false;
+            const reward = calculateReward(Game.wave);
+            Game.potentialReward = reward;
+            
+            document.getElementById('message-area').innerText = `Верно! Куш: +${reward}`;
+            updateHUD();
+
+            // Показываем кнопки выбора
+            document.getElementById('btn-stop').style.display = 'block';
+            document.getElementById('btn-risk').style.display = 'block';
+            
+            // Обновляем текст кнопки стопа
+            document.getElementById('btn-stop').innerText = `ЗАБРАТЬ +${reward}`;
+        }
+
+        function stopRound(success) {
+            if (success) {
+                gameOver(true);
+            }
+        }
+
+        function nextRound() {
+            Game.wave++;
+            prepareRound();
+        }
+
+        function updateHUD() {
+            document.getElementById('wave-display').innerText = Game.wave;
+            const nextReward = calculateReward(Game.wave);
+            document.getElementById('potential-elo').innerText = `+${nextReward}`;
+        }
+
+        function gameOver(win) {
+            Game.roundActive = false;
+            const modal = document.getElementById('result-modal');
+            const title = document.getElementById('res-title');
+            const desc = document.getElementById('res-desc');
+            const scoreEl = document.getElementById('res-score');
+
+            if (win) {
+                playSound('win');
+                DB.elo += Game.potentialReward;
+                title.innerText = "ПОБЕДА!";
+                title.style.color = "#00c853";
+                desc.innerText = `Ты прошел ${Game.wave} волн.`;
+                scoreEl.innerText = `+${Game.potentialReward} ELO`;
+                scoreEl.className = "res-score win";
+            } else {
+                playSound('lose');
+                const penalty = Game.potentialReward * 2; // Штраф x2 от того, что могли получить
+                DB.elo = Math.max(0, DB.elo - penalty);
+                title.innerText = "ОШИБКА!";
+                title.style.color = "#ff5252";
+                desc.innerText = `Неверный цвет на ${Game.wave} волне.`;
+                scoreEl.innerText = `-${penalty} ELO`;
+                scoreEl.className = "res-score lose";
+            }
+            
+            saveDB();
+            setTimeout(() => {
+                modal.classList.add('active');
+            }, 500);
+        }
+
+        // Запуск
+        window.onload = loadDB;
+
+    </script>
+</body>
+</html>
