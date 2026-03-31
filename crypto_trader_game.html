@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crypto Trader - Симулятор Биржи</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #151a2d;
+            --bg-card: #1e2540;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --accent-green: #00ff88;
+            --accent-red: #ff4757;
+            --accent-blue: #3498db;
+            --accent-gold: #f39c12;
+            --border-color: #2d3748;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 10px;
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .balance-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .balance-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--accent-green);
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .day-counter {
+            background: var(--bg-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+        }
+
+        /* Chart Section */
+        .chart-section {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .crypto-selector {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            padding: 5px 0;
+        }
+
+        .crypto-btn {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .crypto-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            transform: scale(1.05);
+        }
+
+        .crypto-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Crypto List */
+        .crypto-list {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .crypto-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.4s ease-out;
+            animation-fill-mode: both;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .crypto-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .crypto-info {
+            flex: 1;
+        }
+
+        .crypto-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .crypto-price {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .crypto-change {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .positive {
+            color: var(--accent-green);
+        }
+
+        .negative {
+            color: var(--accent-red);
+        }
+
+        .crypto-holdings {
+            text-align: right;
+        }
+
+        .holdings-amount {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .holdings-value {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Trading Panel */
+        .trading-panel {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.7s ease-out;
+        }
+
+        .trade-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .trade-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .buy-tab {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .buy-tab.active {
+            background: var(--accent-green);
+            color: #000;
+        }
+
+        .sell-tab {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .sell-tab.active {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .trade-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .trade-input {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .trade-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .quick-amounts {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .quick-btn {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-btn:hover {
+            background: var(--accent-blue);
+        }
+
+        .trade-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-buy {
+            background: linear-gradient(135deg, var(--accent-green), #00cc6a);
+            color: #000;
+        }
+
+        .btn-sell {
+            background: linear-gradient(135deg, var(--accent-red), #cc3a47);
+            color: #fff;
+        }
+
+        .trade-button:active {
+            transform: scale(0.98);
+        }
+
+        .trade-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Portfolio */
+        .portfolio-section {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .portfolio-item {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .portfolio-crypto {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .portfolio-amount {
+            font-size: 16px;
+            color: var(--accent-blue);
+        }
+
+        .portfolio-value {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* News Feed */
+        .news-section {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .news-item {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--accent-blue);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        .news-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .news-text {
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .news-positive {
+            border-left-color: var(--accent-green);
+        }
+
+        .news-negative {
+            border-left-color: var(--accent-red);
+        }
+
+        /* Game Over Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--accent-red);
+        }
+
+        .modal-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, var(--accent-blue), #2980b9);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            padding: 12px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            animation: slideUpToast 0.3s ease-out;
+            min-width: 250px;
+            text-align: center;
+        }
+
+        @keyframes slideUpToast {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast-success {
+            border-left: 4px solid var(--accent-green);
+        }
+
+        .toast-error {
+            border-left: 4px solid var(--accent-red);
+        }
+
+        .toast-info {
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            padding: 10px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+        }
+
+        .nav-btn.active {
+            color: var(--accent-blue);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 3px;
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--bg-secondary);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Price Flash Animation */
+        .price-up {
+            animation: flashGreen 0.5s ease;
+        }
+
+        .price-down {
+            animation: flashRed 0.5s ease;
+        }
+
+        @keyframes flashGreen {
+            0%, 100% {
+                color: var(--text-primary);
+            }
+            50% {
+                color: var(--accent-green);
+            }
+        }
+
+        @keyframes flashRed {
+            0%, 100% {
+                color: var(--text-primary);
+            }
+            50% {
+                color: var(--accent-red);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="balance-info">
+                <div>
+                    <div class="balance-label">Баланс</div>
+                    <div class="balance-amount" id="balance">100.00 ₽</div>
+                </div>
+                <div class="day-counter">День <span id="day">1</span></div>
+            </div>
+            <div style="text-align: center; margin-top: 10px;">
+                <div class="balance-label">Общий капитал</div>
+                <div class="balance-amount" id="total-capital" style="font-size: 20px;">100.00 ₽</div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="section-title">График</div>
+                <div class="crypto-selector" id="crypto-selector">
+                    <!-- Crypto buttons will be added here -->
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+            <div style="text-align: center; margin-top: 10px;">
+                <div id="current-price" style="font-size: 24px; font-weight: bold;">0.00 $</div>
+                <div id="price-change" style="font-size: 14px;">0.00%</div>
+            </div>
+        </div>
+
+        <!-- Trading Panel -->
+        <div class="trading-panel">
+            <div class="trade-tabs">
+                <button class="trade-tab buy-tab active" onclick="setTradeType('buy')">Купить</button>
+                <button class="trade-tab sell-tab" onclick="setTradeType('sell')">Продать</button>
+            </div>
+            <div class="trade-inputs">
+                <div class="input-group">
+                    <label class="input-label">Количество</label>
+                    <input type="number" class="trade-input" id="trade-amount" placeholder="0.00" step="0.0001">
+                    <div class="quick-amounts">
+                        <button class="quick-btn" onclick="setQuickAmount(0.1)">10%</button>
+                        <button class="quick-btn" onclick="setQuickAmount(0.25)">25%</button>
+                        <button class="quick-btn" onclick="setQuickAmount(0.5)">50%</button>
+                        <button class="quick-btn" onclick="setQuickAmount(1)">MAX</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Итого</label>
+                    <input type="text" class="trade-input" id="trade-total" readonly placeholder="0.00 ₽">
+                </div>
+                <button class="trade-button btn-buy" id="trade-btn" onclick="executeTrade()">
+                    Купить
+                </button>
+            </div>
+        </div>
+
+        <!-- Crypto List -->
+        <div class="crypto-list" id="crypto-list">
+            <!-- Crypto cards will be added here -->
+        </div>
+
+        <!-- Portfolio -->
+        <div class="portfolio-section">
+            <div class="section-title">Портфель</div>
+            <div class="portfolio-grid" id="portfolio-grid">
+                <!-- Portfolio items will be added here -->
+            </div>
+        </div>
+
+        <!-- News Feed -->
+        <div class="news-section">
+            <div class="section-title">Новости рынка</div>
+            <div id="news-feed">
+                <!-- News items will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <button class="nav-btn active" onclick="scrollToSection('chart-section')">
+            <div class="nav-icon">📊</div>
+            <div>Рынок</div>
+        </button>
+        <button class="nav-btn" onclick="scrollToSection('trading-panel')">
+            <div class="nav-icon">💱</div>
+            <div>Торговля</div>
+        </button>
+        <button class="nav-btn" onclick="scrollToSection('portfolio-section')">
+            <div class="nav-icon">💼</div>
+            <div>Портфель</div>
+        </button>
+        <button class="nav-btn" onclick="scrollToSection('news-section')">
+            <div class="nav-icon">📰</div>
+            <div>Новости</div>
+        </button>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal-overlay" id="game-over-modal">
+        <div class="modal-content">
+            <div class="modal-title">💸 БАНКРОТ!</div>
+            <div class="modal-message">
+                Вы потеряли все деньги! Рынок безжалостен.<br><br>
+                Попробуйте снова и станьте крипто-магнатом!
+            </div>
+            <button class="restart-btn" onclick="restartGame()">Начать заново</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // Game State
+        let gameState = {
+            balance: 100,
+            day: 1,
+            portfolio: {},
+            selectedCrypto: 'BTC',
+            tradeType: 'buy',
+            priceHistory: {},
+            gameActive: true
+        };
+
+        // Cryptocurrencies configuration
+        const cryptos = {
+            BTC: { name: 'Bitcoin', symbol: 'BTC', basePrice: 30000, volatility: 0.03 },
+            ETH: { name: 'Ethereum', symbol: 'ETH', basePrice: 2000, volatility: 0.04 },
+            BNB: { name: 'Binance Coin', symbol: 'BNB', basePrice: 300, volatility: 0.05 },
+            ADA: { name: 'Cardano', symbol: 'ADA', basePrice: 1.5, volatility: 0.06 },
+            SOL: { name: 'Solana', symbol: 'SOL', basePrice: 100, volatility: 0.07 },
+            DOT: { name: 'Polkadot', symbol: 'DOT', basePrice: 20, volatility: 0.06 },
+            DOGE: { name: 'Dogecoin', symbol: 'DOGE', basePrice: 0.15, volatility: 0.08 },
+            XRP: { name: 'Ripple', symbol: 'XRP', basePrice: 1.2, volatility: 0.05 }
+        };
+
+        // Current prices
+        let currentPrices = {};
+
+        // News templates
+        const newsTemplates = {
+            positive: [
+                "Крупный инвестор вложил миллионы в {crypto}",
+                "{crypto} показывает рекордный рост",
+                "Положительные новости от разработчиков {crypto}",
+                "Институциональный интерес к {crypto} растет",
+                "{crypto} готовится к важному обновлению"
+            ],
+            negative: [
+                "Регуляторы критикуют {crypto}",
+                "Крупный держатель продает {crypto}",
+                "Технические проблемы у сети {crypto}",
+                "Негативные прогнозы аналитиков по {crypto}",
+                "Хакерская атака на платформу связанную с {crypto}"
+            ],
+            neutral: [
+                "Рынок криптовалют ожидает важных новостей",
+                "Объем торгов {crypto} остается стабильным",
+                "Аналитики предсказывают волатильность {crypto}",
+                "Новое исследование о влиянии {crypto} на рынок"
+            ]
+        };
+
+        // Initialize game
+        function initGame() {
+            initializePrices();
+            createCryptoSelector();
+            renderCryptoList();
+            updatePortfolio();
+            updateUI();
+            startPriceUpdates();
+            addNewsItem("Добро пожаловать в мир криптовалют! Начните с 100₽ и станьте магнатом!", "neutral");
+        }
+
+        // Initialize prices
+        function initializePrices() {
+            Object.keys(cryptos).forEach(symbol => {
+                currentPrices[symbol] = cryptos[symbol].basePrice;
+                gameState.priceHistory[symbol] = [];
+                // Add initial price history
+                for (let i = 0; i < 50; i++) {
+                    gameState.priceHistory[symbol].push(currentPrices[symbol]);
+                }
+            });
+        }
+
+        // Create crypto selector buttons
+        function createCryptoSelector() {
+            const selector = document.getElementById('crypto-selector');
+            selector.innerHTML = '';
+            
+            Object.keys(cryptos).forEach(symbol => {
+                const btn = document.createElement('button');
+                btn.className = `crypto-btn ${symbol === gameState.selectedCrypto ? 'active' : ''}`;
+                btn.textContent = symbol;
+                btn.onclick = () => selectCrypto(symbol);
+                selector.appendChild(btn);
+            });
+        }
+
+        // Select cryptocurrency
+        function selectCrypto(symbol) {
+            gameState.selectedCrypto = symbol;
+            createCryptoSelector();
+            updateChart();
+            updateCurrentPriceDisplay();
+        }
+
+        // Render crypto list
+        function renderCryptoList() {
+            const list = document.getElementById('crypto-list');
+            list.innerHTML = '';
+            
+            Object.keys(cryptos).forEach((symbol, index) => {
+                const crypto = cryptos[symbol];
+                const price = currentPrices[symbol];
+                const holdings = gameState.portfolio[symbol] || 0;
+                const value = holdings * price;
+                
+                const card = document.createElement('div');
+                card.className = 'crypto-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.onclick = () => selectCrypto(symbol);
+                
+                const change = calculatePriceChange(symbol);
+                const changeClass = change >= 0 ? 'positive' : 'negative';
+                const changeSign = change >= 0 ? '+' : '';
+                
+                card.innerHTML = `
+                    <div class="crypto-info">
+                        <div class="crypto-name">${crypto.name} (${symbol})</div>
+                        <div class="crypto-price">${price.toFixed(2)} $</div>
+                        <div class="crypto-change ${changeClass}">${changeSign}${change.toFixed(2)}%</div>
+                    </div>
+                    <div class="crypto-holdings">
+                        <div class="holdings-amount">${holdings.toFixed(4)} ${symbol}</div>
+                        <div class="holdings-value">${value.toFixed(2)} ₽</div>
+                    </div>
+                `;
+                
+                list.appendChild(card);
+            });
+        }
+
+        // Calculate price change percentage
+        function calculatePriceChange(symbol) {
+            const history = gameState.priceHistory[symbol];
+            if (history.length < 2) return 0;
+            const oldPrice = history[history.length - 2];
+            const newPrice = history[history.length - 1];
+            return ((newPrice - oldPrice) / oldPrice) * 100;
+        }
+
+        // Update portfolio display
+        function updatePortfolio() {
+            const grid = document.getElementById('portfolio-grid');
+            grid.innerHTML = '';
+            
+            let hasHoldings = false;
+            Object.keys(gameState.portfolio).forEach(symbol => {
+                const amount = gameState.portfolio[symbol];
+                if (amount > 0) {
+                    hasHoldings = true;
+                    const value = amount * currentPrices[symbol];
+                    const item = document.createElement('div');
+                    item.className = 'portfolio-item';
+                    item.innerHTML = `
+                        <div class="portfolio-crypto">${symbol}</div>
+                        <div class="portfolio-amount">${amount.toFixed(4)}</div>
+                        <div class="portfolio-value">${value.toFixed(2)} ₽</div>
+                    `;
+                    grid.appendChild(item);
+                }
+            });
+            
+            if (!hasHoldings) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 20px;">Нет активов в портфеле</div>';
+            }
+        }
+
+        // Update UI elements
+        function updateUI() {
+            document.getElementById('balance').textContent = gameState.balance.toFixed(2) + ' ₽';
+            document.getElementById('day').textContent = gameState.day;
+            
+            const totalCapital = calculateTotalCapital();
+            document.getElementById('total-capital').textContent = totalCapital.toFixed(2) + ' ₽';
+            
+            renderCryptoList();
+            updatePortfolio();
+            updateCurrentPriceDisplay();
+            updateTradeButton();
+        }
+
+        // Calculate total capital
+        function calculateTotalCapital() {
+            let total = gameState.balance;
+            Object.keys(gameState.portfolio).forEach(symbol => {
+                total += gameState.portfolio[symbol] * currentPrices[symbol];
+            });
+            return total;
+        }
+
+        // Update current price display
+        function updateCurrentPriceDisplay() {
+            const symbol = gameState.selectedCrypto;
+            const price = currentPrices[symbol];
+            const change = calculatePriceChange(symbol);
+            const changeClass = change >= 0 ? 'positive' : 'negative';
+            const changeSign = change >= 0 ? '+' : '';
+            
+            document.getElementById('current-price').textContent = price.toFixed(2) + ' $';
+            document.getElementById('price-change').textContent = `${changeSign}${change.toFixed(2)}%`;
+            document.getElementById('price-change').className = changeClass;
+        }
+
+        // Set trade type
+        function setTradeType(type) {
+            gameState.tradeType = type;
+            document.querySelector('.buy-tab').classList.toggle('active', type === 'buy');
+            document.querySelector('.sell-tab').classList.toggle('active', type === 'sell');
+            
+            const btn = document.getElementById('trade-btn');
+            btn.className = `trade-button ${type === 'buy' ? 'btn-buy' : 'btn-sell'}`;
+            btn.textContent = type === 'buy' ? 'Купить' : 'Продать';
+            
+            updateTradeButton();
+        }
+
+        // Set quick amount
+        function setQuickAmount(percentage) {
+            const input = document.getElementById('trade-amount');
+            const symbol = gameState.selectedCrypto;
+            const price = currentPrices[symbol];
+            
+            if (gameState.tradeType === 'buy') {
+                const maxAmount = gameState.balance / price;
+                input.value = (maxAmount * percentage).toFixed(4);
+            } else {
+                const holdings = gameState.portfolio[symbol] || 0;
+                input.value = (holdings * percentage).toFixed(4);
+            }
+            
+            calculateTradeTotal();
+        }
+
+        // Calculate trade total
+        function calculateTradeTotal() {
+            const amount = parseFloat(document.getElementById('trade-amount').value) || 0;
+            const price = currentPrices[gameState.selectedCrypto];
+            const total = amount * price;
+            document.getElementById('trade-total').value = total.toFixed(2) + ' ₽';
+        }
+
+        // Update trade button state
+        function updateTradeButton() {
+            const btn = document.getElementById('trade-btn');
+            const amount = parseFloat(document.getElementById('trade-amount').value) || 0;
+            const price = currentPrices[gameState.selectedCrypto];
+            const total = amount * price;
+            
+            if (gameState.tradeType === 'buy') {
+                btn.disabled = total > gameState.balance || amount <= 0;
+            } else {
+                const holdings = gameState.portfolio[gameState.selectedCrypto] || 0;
+                btn.disabled = amount > holdings || amount <= 0;
+            }
+        }
+
+        // Execute trade
+        function executeTrade() {
+            if (!gameState.gameActive) return;
+            
+            const amount = parseFloat(document.getElementById('trade-amount').value);
+            if (isNaN(amount) || amount <= 0) {
+                showToast('Введите корректное количество', 'error');
+                return;
+            }
+            
+            const symbol = gameState.selectedCrypto;
+            const price = currentPrices[symbol];
+            const total = amount * price;
+            
+            if (gameState.tradeType === 'buy') {
+                if (total > gameState.balance) {
+                    showToast('Недостаточно средств', 'error');
+                    return;
+                }
+                
+                gameState.balance -= total;
+                gameState.portfolio[symbol] = (gameState.portfolio[symbol] || 0) + amount;
+                showToast(`Куплено ${amount.toFixed(4)} ${symbol} за ${total.toFixed(2)} ₽`, 'success');
+                
+            } else {
+                const holdings = gameState.portfolio[symbol] || 0;
+                if (amount > holdings) {
+                    showToast('Недостаточно криптовалюты', 'error');
+                    return;
+                }
+                
+                gameState.portfolio[symbol] -= amount;
+                gameState.balance += total;
+                showToast(`Продано ${amount.toFixed(4)} ${symbol} за ${total.toFixed(2)} ₽`, 'success');
+            }
+            
+            document.getElementById('trade-amount').value = '';
+            document.getElementById('trade-total').value = '';
+            updateUI();
+            checkGameOver();
+        }
+
+        // Check game over condition
+        function checkGameOver() {
+            const totalCapital = calculateTotalCapital();
+            if (totalCapital < 1 && gameState.gameActive) {
+                gameOver();
+            }
+        }
+
+        // Game over
+        function gameOver() {
+            gameState.gameActive = false;
+            document.getElementById('game-over-modal').style.display = 'flex';
+        }
+
+        // Restart game
+        function restartGame() {
+            gameState = {
+                balance: 100,
+                day: 1,
+                portfolio: {},
+                selectedCrypto: 'BTC',
+                tradeType: 'buy',
+                priceHistory: {},
+                gameActive: true
+            };
+            
+            initializePrices();
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('trade-amount').value = '';
+            document.getElementById('trade-total').value = '';
+            updateUI();
+            showToast('Игра перезапущена! Удачи!', 'info');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideDownToast 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Add news item
+        function addNewsItem(text, type = 'neutral') {
+            const feed = document.getElementById('news-feed');
+            const item = document.createElement('div');
+            item.className = `news-item news-${type}`;
+            
+            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            
+            item.innerHTML = `
+                <div class="news-time">${time}</div>
+                <div class="news-text">${text}</div>
+            `;
+            
+            feed.insertBefore(item, feed.firstChild);
+            
+            // Keep only last 5 news items
+            while (feed.children.length > 5) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Generate random news
+        function generateNews() {
+            if (!gameState.gameActive) return;
+            
+            const symbols = Object.keys(cryptos);
+            const randomSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+            const cryptoName = cryptos[randomSymbol].name;
+            
+            const types = ['positive', 'negative', 'neutral'];
+            const weights = [0.3, 0.3, 0.4]; // Probability weights
+            
+            const random = Math.random();
+            let cumulative = 0;
+            let selectedType = 'neutral';
+            
+            for (let i = 0; i < types.length; i++) {
+                cumulative += weights[i];
+                if (random <= cumulative) {
+                    selectedType = types[i];
+                    break;
+                }
+            }
+            
+            const templates = newsTemplates[selectedType];
+            const template = templates[Math.floor(Math.random() * templates.length)];
+            const newsText = template.replace('{crypto}', cryptoName);
+            
+            addNewsItem(newsText, selectedType);
+            
+            // Market impact from news
+            if (selectedType === 'positive') {
+                currentPrices[randomSymbol] *= (1 + Math.random() * 0.05);
+            } else if (selectedType === 'negative') {
+                currentPrices[randomSymbol] *= (1 - Math.random() * 0.05);
+            }
+        }
+
+        // Update prices
+        function updatePrices() {
+            if (!gameState.gameActive) return;
+            
+            Object.keys(cryptos).forEach(symbol => {
+                const crypto = cryptos[symbol];
+                const volatility = crypto.volatility;
+                
+                // Random price movement with trend
+                const trend = (Math.random() - 0.5) * 2; // -1 to 1
+                const change = trend * volatility;
+                
+                const oldPrice = currentPrices[symbol];
+                currentPrices[symbol] *= (1 + change);
+                
+                // Ensure price doesn't go too low
+                if (currentPrices[symbol] < crypto.basePrice * 0.1) {
+                    currentPrices[symbol] = crypto.basePrice * 0.1;
+                }
+                
+                // Update price history
+                gameState.priceHistory[symbol].push(currentPrices[symbol]);
+                if (gameState.priceHistory[symbol].length > 50) {
+                    gameState.priceHistory[symbol].shift();
+                }
+            });
+            
+            updateUI();
+            updateChart();
+        }
+
+        // Draw chart
+        function updateChart() {
+            const canvas = document.getElementById('priceChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Get data for selected crypto
+            const symbol = gameState.selectedCrypto;
+            const data = gameState.priceHistory[symbol];
+            
+            if (data.length < 2) return;
+            
+            // Find min and max prices
+            const minPrice = Math.min(...data) * 0.99;
+            const maxPrice = Math.max(...data) * 1.01;
+            const priceRange = maxPrice - minPrice;
+            
+            // Draw grid
+            ctx.strokeStyle = '#2d3748';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (height - 2 * padding) * i / 4;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                // Price labels
+                const price = maxPrice - (priceRange * i / 4);
+                ctx.fillStyle = '#a0aec0';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(price.toFixed(2), padding - 5, y + 3);
+            }
+            
+            // Draw price line
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const xStep = (width - 2 * padding) / (data.length - 1);
+            
+            data.forEach((price, index) => {
+                const x = padding + index * xStep;
+                const y = padding + (height - 2 * padding) * (1 - (price - minPrice) / priceRange);
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Draw gradient fill
+            const gradient = ctx.createLinearGradient(0, padding, 0, height - padding);
+            gradient.addColorStop(0, 'rgba(52, 152, 219, 0.3)');
+            gradient.addColorStop(1, 'rgba(52, 152, 219, 0)');
+            
+            ctx.lineTo(width - padding, height - padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Draw current price dot
+            const lastPrice = data[data.length - 1];
+            const lastX = width - padding;
+            const lastY = padding + (height - 2 * padding) * (1 - (lastPrice - minPrice) / priceRange);
+            
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#3498db';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Start price updates
+        function startPriceUpdates() {
+            // Update prices every 2 seconds
+            setInterval(updatePrices, 2000);
+            
+            // Generate news every 10 seconds
+            setInterval(generateNews, 10000);
+            
+            // Increment day every 30 seconds
+            setInterval(() => {
+                if (gameState.gameActive) {
+                    gameState.day++;
+                    updateUI();
+                }
+            }, 30000);
+        }
+
+        // Scroll to section
+        function scrollToSection(sectionId) {
+            const section = document.querySelector('.' + sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Event listeners
+        document.getElementById('trade-amount').addEventListener('input', calculateTradeTotal);
+        document.getElementById('trade-amount').addEventListener('input', updateTradeButton);
+
+        // Handle resize
+        window.addEventListener('resize', updateChart);
+
+        // Initialize game on load
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
